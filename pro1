@@ -1,0 +1,135 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+typedef struct HashNode {
+    long long bucketId;
+    long long val;
+    struct HashNode* next;
+} HashNode;
+
+// Fast absolute value modulo macro
+#define GET_HASH(bId, size) (((bId) % (size) + (size)) % (size))
+
+// Adds or overrides a bucket node into the chain
+void insertBucket(HashNode** table, int size, long long bucketId, long long val) {
+    int idx = GET_HASH(bucketId, size);
+    
+    // Check if the bucket ID already exists in this chain to update it
+    HashNode* curr = table[idx];
+    while (curr) {
+        if (curr->bucketId == bucketId) {
+            curr->val = val;
+            return;
+        }
+        curr = curr->next;
+    }
+    
+    // Otherwise, prepend a brand-new chain node
+    HashNode* newNode = (HashNode*)malloc(sizeof(HashNode));
+    newNode->bucketId = bucketId;
+    newNode->val = val;
+    newNode->next = table[idx];
+    table[idx] = newNode;
+}
+
+// Searches the bucket chain for an active element value
+bool findBucket(HashNode** table, int size, long long bucketId, long long* outVal) {
+    int idx = GET_HASH(bucketId, size);
+    HashNode* curr = table[idx];
+    while (curr) {
+        if (curr->bucketId == bucketId) {
+            *outVal = curr->val;
+            return true;
+        }
+        curr = curr->next;
+    }
+    return false;
+}
+
+// Drops a bucket out of the active chain tracking window in O(1) time
+void deleteBucket(HashNode** table, int size, long long bucketId) {
+    int idx = GET_HASH(bucketId, size);
+    HashNode* curr = table[idx];
+    HashNode* prev = NULL;
+    
+    while (curr) {
+        if (curr->bucketId == bucketId) {
+            if (prev) {
+                prev->next = curr->next;
+            } else {
+                table[idx] = curr->next;
+            }
+            free(curr);
+            return;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+}
+
+// Safely sweeps remaining elements out of heap memory
+void freeTable(HashNode** table, int size) {
+    for (int i = 0; i < size; i++) {
+        HashNode* curr = table[i];
+        while (curr) {
+            HashNode* temp = curr;
+            curr = curr->next;
+            free(temp);
+        }
+    }
+    free(table);
+}
+
+bool containsNearbyAlmostDuplicate(int* nums, int numsSize, int indexDiff, int valueDiff) {
+    if (nums == NULL || numsSize < 2 || indexDiff <= 0 || valueDiff < 0) return false;
+
+    // Constrain table allocation sizing to match the active sliding window exactly
+    int tableSize = indexDiff + 1;
+    if (tableSize > numsSize) tableSize = numsSize;
+    
+    HashNode** table = (HashNode**)calloc(tableSize, sizeof(HashNode*));
+    long long width = (long long)valueDiff + 1;
+
+    for (int i = 0; i < numsSize; i++) {
+        long long val = nums[i];
+        
+        // Correct bucket partitioning split boundary mapping across negative domains
+        long long bucketId = val / width;
+        if (val < 0) bucketId = ((val + 1) / width) - 1;
+
+        long long cachedVal;
+
+        // 1. Same bucket collision check
+        if (findBucket(table, tableSize, bucketId, &cachedVal)) {
+            freeTable(table, tableSize);
+            return true;
+        }
+
+        // 2. Left neighbor bucket verification
+        if (findBucket(table, tableSize, bucketId - 1, &cachedVal) && (val - cachedVal <= valueDiff)) {
+            freeTable(table, tableSize);
+            return true;
+        }
+
+        // 3. Right neighbor bucket verification
+        if (findBucket(table, tableSize, bucketId + 1, &cachedVal) && (cachedVal - val <= valueDiff)) {
+            freeTable(table, tableSize);
+            return true;
+        }
+
+        // Keep current element inside the map tracking bounds
+        insertBucket(table, tableSize, bucketId, val);
+
+        // Instantly eject elements that have dropped past the indexDiff constraint
+        if (i >= indexDiff) {
+            long long oldVal = nums[i - indexDiff];
+            long long oldBucketId = oldVal / width;
+            if (oldVal < 0) oldBucketId = ((oldVal + 1) / width) - 1;
+            deleteBucket(table, tableSize, oldBucketId);
+        }
+    }
+
+    freeTable(table, tableSize);
+    return false;
+}
