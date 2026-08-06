@@ -1,0 +1,64 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define HASH_SIZE 20011 
+typedef struct Node {
+    char sequence[11];
+    int count;
+    struct Node* next;
+} Node;
+unsigned int hash(const char* str) {
+    unsigned int h = 0;
+    for (int i = 0; i < 10; i++) {
+        h = (h << 5) + h + str[i];
+    }
+    return h % HASH_SIZE;
+}
+int insertAndCount(Node** hashTable, const char* seq) {
+    unsigned int index = hash(seq);
+    Node* curr = hashTable[index];
+        while (curr != NULL) {
+        if (strcmp(curr->sequence, seq) == 0) {
+            curr->count++;
+            return curr->count;
+        }
+        curr = curr->next;
+    }
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    strcpy(newNode->sequence, seq);
+    newNode->count = 1;
+    newNode->next = hashTable[index];
+    hashTable[index] = newNode;
+       return 1;
+}
+void freeHashTable(Node** hashTable) {
+    for (int i = 0; i < HASH_SIZE; i++) {
+        Node* curr = hashTable[i];
+        while (curr != NULL) {
+            Node* temp = curr;
+            curr = curr->next;
+            free(temp);
+        }
+    }
+}
+char** findRepeatedDnaSequences(char* s, int* returnSize) {
+    *returnSize = 0;
+    if (s == NULL || strlen(s) < 10) return NULL;
+    int len = strlen(s);
+    char** result = (char**)malloc((len - 9) * sizeof(char*));
+    Node** hashTable = (Node**)calloc(HASH_SIZE, sizeof(Node*));
+    char currentSeq[11];
+    currentSeq[10] = '\0';
+    for (int i = 0; i <= len - 10; i++) {
+        strncpy(currentSeq, s + i, 10);   
+        int count = insertAndCount(hashTable, currentSeq);
+        if (count == 2) {
+            result[*returnSize] = (char*)malloc(11 * sizeof(char));
+            strcpy(result[*returnSize], currentSeq);
+            (*returnSize)++;
+        }
+    }
+    freeHashTable(hashTable);
+    free(hashTable);   
+  return result;
+}
