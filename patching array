@@ -1,0 +1,20 @@
+int minPatches(int* nums, int numsSize, int n) {
+    // Use long long for miss to prevent integer overflow when adding up to n
+    long long miss = 1;
+    int patches = 0;
+    int i = 0;
+
+    while (miss <= n) {
+        if (i < numsSize && nums[i] <= miss) {
+            // Current number can help extend our reachable range
+            miss += nums[i];
+            i++;
+        } else {
+            // Current number is too big or unavailable, we must patch 'miss'
+            miss += miss;
+            patches++;
+        }
+    }
+
+    return patches;
+}
