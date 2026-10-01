@@ -1,0 +1,26 @@
+// Helper function to reverse a section of the array
+void reverse(int* nums, int start, int end) {
+    while (start < end) {
+        int temp = nums[start];
+        nums[start] = nums[end];
+        nums[end] = temp;
+        start++;
+        end--;
+    }
+}
+
+// Main function to rotate the array
+void rotate(int* nums, int numsSize, int k) {
+    // Handle cases where k is greater than the array size
+    k = k % numsSize;
+    if (k == 0) return;
+
+    // Step 1: Reverse the entire array
+    reverse(nums, 0, numsSize - 1);
+    
+    // Step 2: Reverse the first k elements
+    reverse(nums, 0, k - 1);
+    
+    // Step 3: Reverse the remaining elements
+    reverse(nums, k, numsSize - 1);
+}
