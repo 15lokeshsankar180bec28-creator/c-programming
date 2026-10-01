@@ -1,0 +1,43 @@
+#include <stdlib.h>
+
+// Structure to hold element value and its original index
+typedef struct {
+    int value;
+    int index;
+} Element;
+
+// Comparison function for qsort to sort elements by value
+int compare(const void* a, const void* b) {
+    Element* elemA = (Element*)a;
+    Element* elemB = (Element*)b;
+    if (elemA->value < elemB->value) return -1;
+    if (elemA->value > elemB->value) return 1;
+    return 0;
+}
+
+long long countOperationsToEmptyArray(int* nums, int numsSize) {
+    Element* arr = (Element*)malloc(numsSize * sizeof(Element));
+    
+    // Step 1: Store values and their original indices
+    for (int i = 0; i < numsSize; i++) {
+        arr[i].value = nums[i];
+        arr[i].index = i;
+    }
+    
+    // Step 2: Sort based on values in ascending order
+    qsort(arr, numsSize, sizeof(Element), compare);
+    
+    // Every element must be deleted at least once, so start with numsSize operations
+    long long total_operations = numsSize;
+    
+    // Step 3: Check for wrap-arounds
+    for (int i = 1; i < numsSize; i++) {
+        if (arr[i].index < arr[i - 1].index) {
+            // A wrap-around happened; we must traverse all remaining elements
+            total_operations += (numsSize - i);
+        }
+    }
+    
+    free(arr);
+    return total_operations;
+}
