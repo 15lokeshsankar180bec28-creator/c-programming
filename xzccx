@@ -1,0 +1,55 @@
+#include <limits.h>
+
+// A large negative value to represent negative infinity for long long
+#define INF_NEG -1e16
+
+long long max(long long a, long long b) {
+    return (a > b) ? a : b;
+}
+
+long long maxSumTrionic(int* nums, int numsSize) {
+    // DP states initialized for the first element (index 0)
+    long long dp0 = nums[0]; // State 0: Length 1 increasing
+    long long dp1 = INF_NEG; // State 1: Length >= 2 increasing
+    long long dp2 = INF_NEG; // State 2: Decreasing phase
+    long long dp3 = INF_NEG; // State 3: Second increasing phase
+    
+    long long max_trionic_sum = INF_NEG;
+
+    for (int i = 1; i < numsSize; i++) {
+        long long next_dp0, next_dp1, next_dp2, next_dp3;
+        
+        // State 0 can always reset and start fresh at the current element
+        next_dp0 = nums[i];
+        
+        if (nums[i] > nums[i - 1]) {
+            // Strictly Increasing transitions
+            next_dp1 = nums[i] + max(dp0, dp1);
+            next_dp2 = INF_NEG;
+            next_dp3 = nums[i] + max(dp2, dp3);
+        } else if (nums[i] < nums[i - 1]) {
+            // Strictly Decreasing transitions
+            next_dp1 = INF_NEG;
+            next_dp2 = nums[i] + max(dp1, dp2);
+            next_dp3 = INF_NEG;
+        } else {
+            // Elements are equal: breaks all strict monotonicity phases
+            next_dp1 = INF_NEG;
+            next_dp2 = INF_NEG;
+            next_dp3 = INF_NEG;
+        }
+        
+        // Update the global maximum with any valid completed trionic subarray sum
+        if (next_dp3 > max_trionic_sum) {
+            max_trionic_sum = next_dp3;
+        }
+        
+        // Move to the next iteration
+        dp0 = next_dp0;
+        dp1 = next_dp1;
+        dp2 = next_dp2;
+        dp3 = next_dp3;
+    }
+
+    return max_trionic_sum;
+}
