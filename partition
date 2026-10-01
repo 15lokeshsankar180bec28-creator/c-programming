@@ -1,0 +1,115 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <limits.h> // Required for LLONG_MAX
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
+// Comparison function for qsort
+int compareLongLong(const void* a, const void* b) {
+    long long diff = (*(long long*)a - *(long long*)b);
+    if (diff < 0) return -1;
+    if (diff > 0) return 1;
+    return 0;
+}
+
+// Custom binary search to find the closest value to target
+void findClosest(long long* arr, int size, double target, long long l_sum, long long total_sum, long long* min_diff) {
+    int low = 0, high = size - 1;
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        long long current_sum = l_sum + arr[mid];
+        long long current_diff = llabs(total_sum - 2 * current_sum);
+        *min_diff = MIN(*min_diff, current_diff);
+
+        if (arr[mid] < target) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+}
+
+int minimumDifference(int* nums, int numsSize) {
+    int n = numsSize / 2;
+    long long total_sum = 0;
+    for (int i = 0; i < numsSize; i++) {
+        total_sum += nums[i];
+    }
+
+    // Static/Dynamic arrays to store sums grouped by element count k
+    long long** left_sums = (long long**)malloc((n + 1) * sizeof(long long*));
+    long long** right_sums = (long long**)malloc((n + 1) * sizeof(long long*));
+    int* left_counts = (int*)calloc(n + 1, sizeof(int));
+    int* right_counts = (int*)calloc(n + 1, sizeof(int));
+
+    for (int i = 0; i <= n; i++) {
+        left_sums[i] = (long long*)malloc(6500 * sizeof(long long));
+        right_sums[i] = (long long*)malloc(6500 * sizeof(long long));
+    }
+
+    // Generate combinations for the left half
+    int left_sz = n;
+    for (int i = 0; i < (1 << left_sz); i++) {
+        int cnt = 0;
+        long long s = 0;
+        for (int j = 0; j < left_sz; j++) {
+            if ((i >> j) & 1) {
+                cnt++;
+                s += nums[j];
+            }
+        }
+        left_sums[cnt][left_counts[cnt]++] = s;
+    }
+
+    // Generate combinations for the right half
+    int right_sz = n;
+    for (int i = 0; i < (1 << right_sz); i++) {
+        int cnt = 0;
+        long long s = 0;
+        for (int j = 0; j < right_sz; j++) {
+            if ((i >> j) & 1) {
+                cnt++;
+                s += nums[n + j];
+            }
+        }
+        right_sums[cnt][right_counts[cnt]++] = s;
+    }
+
+    // Sort the right-half lists for binary search
+    for (int i = 0; i <= n; i++) {
+        qsort(right_sums[i], right_counts[i], sizeof(long long), compareLongLong);
+    }
+
+    // FIX: Initialize with maximum possible long long value instead of llabs(total_sum)
+    long long min_diff = LLONG_MAX; 
+
+    // Meet-in-the-middle searching
+    double target = (double)total_sum / 2.0;
+    for (int k = 0; k <= n; k++) {
+        int r_cnt = n - k; 
+        int r_size = right_counts[r_cnt];
+        long long* r_arr = right_sums[r_cnt];
+
+        for (int i = 0; i < left_counts[k]; i++) {
+            long long l_sum = left_sums[k][i];
+            double ideal_r = target - l_sum;
+
+            findClosest(r_arr, r_size, ideal_r, l_sum, total_sum, &min_diff);
+        }
+    }
+
+    // Free allocated memory
+    for (int i = 0; i <= n; i++) {
+        free(left_sums[i]);
+        free(right_sums[i]);
+    }
+    free(left_sums);
+    free(right_sums);
+    free(left_counts);
+    free(right_counts);
+
+    return (int)min_diff;
+}
