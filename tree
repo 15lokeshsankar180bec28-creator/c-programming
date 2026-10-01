@@ -1,0 +1,91 @@
+#include <stdlib.h>
+#include <stdbool.h>
+
+// Fenwick Tree (Binary Indexed Tree) helper functions
+void updateBIT(int* bit, int n, int idx, int val) {
+    for (; idx <= n; idx += idx & -idx) {
+        bit[idx] += val;
+    }
+}
+
+int queryBIT(int* bit, int idx) {
+    int sum = 0;
+    for (; idx > 0; idx -= idx & -idx) {
+        sum += bit[idx];
+    }
+    return sum;
+}
+
+int rangeQuery(int* bit, int l, int r) {
+    if (l > r) return 0;
+    return queryBIT(bit, r) - queryBIT(bit, l - 1);
+}
+
+// Helper to check if an index is a peak in the original array
+bool isPeak(int* nums, int numsSize, int i) {
+    if (i <= 0 || i >= numsSize - 1) return false;
+    return nums[i] > nums[i - 1] && nums[i] > nums[i + 1];
+}
+
+int* countOfPeaks(int* nums, int numsSize, int** queries, int queriesSize, int* queriesColSize, int* returnSize) {
+    // 1-based indexing for BIT
+    int* bit = (int*)calloc(numsSize + 1, sizeof(int));
+    int* peakStatus = (int*)calloc(numsSize, sizeof(int));
+    
+    // Initialize peak statuses and build the Fenwick Tree
+    for (int i = 1; i < numsSize - 1; i++) {
+        if (isPeak(nums, numsSize, i)) {
+            peakStatus[i] = 1;
+            updateBIT(bit, numsSize, i + 1, 1); // BIT is 1-indexed
+        }
+    }
+    
+    // Allocate space for results
+    int* result = (int*)malloc(queriesSize * sizeof(int));
+    int resIdx = 0;
+    
+    for (int q = 0; q < queriesSize; q++) {
+        int type = queries[q][0];
+        
+        if (type == 1) {
+            int li = queries[q][1];
+            int ri = queries[q][2];
+            // Peaks must be strictly inside the subarray [li + 1, ri - 1]
+            // Map indices to 1-based for BIT: (li + 1) + 1 and (ri - 1) + 1
+            result[resIdx++] = rangeQuery(bit, li + 2, ri);
+        } else if (type == 2) {
+            int idx = queries[q][1];
+            int val = queries[q][2];
+            
+            // Identify which neighboring indices might change status
+            int start = (idx - 1 > 0) ? idx - 1 : 1;
+            int end = (idx + 1 < numsSize - 1) ? idx + 1 : numsSize - 2;
+            
+            // Remove old peak statuses from BIT
+            for (int i = start; i <= end; i++) {
+                if (peakStatus[i] == 1) {
+                    updateBIT(bit, numsSize, i + 1, -1);
+                }
+            }
+            
+            // Update the actual value in the array
+            nums[idx] = val;
+            
+            // Re-evaluate and add new peak statuses to BIT
+            for (int i = start; i <= end; i++) {
+                if (isPeak(nums, numsSize, i)) {
+                    peakStatus[i] = 1;
+                    updateBIT(bit, numsSize, i + 1, 1);
+                } else {
+                    peakStatus[i] = 0;
+                }
+            }
+        }
+    }
+    
+    free(bit);
+    free(peakStatus);
+    
+    *returnSize = resIdx;
+    return result;
+}
