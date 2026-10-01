@@ -1,0 +1,71 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+// Comparison function for qsort
+int compare(const void* a, const void* b) {
+    return (*(int*)a - *(int*)b);
+}
+
+// Helper function to count pairs (j, k) such that arr[j] * arr[k] == target
+long long countPairs(int* arr, int n, long long target) {
+    long long count = 0;
+    int left = 0;
+    int right = n - 1;
+
+    while (left < right) {
+        long long product = (long long)arr[left] * arr[right];
+
+        if (product < target) {
+            left++;
+        } else if (product > target) {
+            right--;
+        } else {
+            // Case 1: All elements between left and right are equal
+            if (arr[left] == arr[right]) {
+                long long elements = right - left + 1;
+                count += (elements * (elements - 1)) / 2;
+                break;
+            }
+
+            // Case 2: Elements at left and right are different
+            int leftCount = 1;
+            int rightCount = 1;
+
+            while (left + 1 < right && arr[left] == arr[left + 1]) {
+                leftCount++;
+                left++;
+            }
+            while (right - 1 > left && arr[right] == arr[right - 1]) {
+                rightCount++;
+                right--;
+            }
+
+            count += (long long)leftCount * rightCount;
+            left++;
+            right--;
+        }
+    }
+    return count;
+}
+
+int numTriplets(int* nums1, int nums1Size, int* nums2, int nums2Size) {
+    // Step 1: Sort both arrays to enable the two-pointer approach
+    qsort(nums1, nums1Size, sizeof(int), compare);
+    qsort(nums2, nums2Size, sizeof(int), compare);
+
+    long long totalTriplets = 0;
+
+    // Type 1: nums1[i]^2 == nums2[j] * nums2[k]
+    for (int i = 0; i < nums1Size; i++) {
+        long long target = (long long)nums1[i] * nums1[i];
+        totalTriplets += countPairs(nums2, nums2Size, target);
+    }
+
+    // Type 2: nums2[i]^2 == nums1[j] * nums1[k]
+    for (int i = 0; i < nums2Size; i++) {
+        long long target = (long long)nums2[i] * nums2[i];
+        totalTriplets += countPairs(nums1, nums1Size, target);
+    }
+
+    return (int)totalTriplets;
+}
