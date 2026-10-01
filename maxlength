@@ -1,0 +1,40 @@
+#include <string.h>
+
+#define OFFSET 100000
+
+int findMaxLength(int* nums, int numsSize) {
+    // Array to store the first seen index of each running sum
+    // Size is 200001 to handle sums from -100000 to 100000
+    int map[200001];
+    
+    // Initialize all positions to -2 (meaning unseen)
+    // We don't use -1 because -1 is a valid index before the start of the array
+    for (int i = 0; i < 200001; i++) {
+        map[i] = -2;
+    }
+    
+    // Base case: A running sum of 0 is conceptually seen at index -1
+    map[0 + OFFSET] = -1;
+    
+    int max_len = 0;
+    int count = 0;
+    
+    for (int i = 0; i < numsSize; i++) {
+        // Treat 0 as -1, and 1 as +1
+        count += (nums[i] == 1) ? 1 : -1;
+        
+        // Check if this running sum has been seen before
+        if (map[count + OFFSET] != -2) {
+            // Update max_len if the current subarray is longer
+            int current_len = i - map[count + OFFSET];
+            if (current_len > max_len) {
+                max_len = current_len;
+            }
+        } else {
+            // Store the first time we see this specific running sum
+            map[count + OFFSET] = i;
+        }
+    }
+    
+    return max_len;
+}
